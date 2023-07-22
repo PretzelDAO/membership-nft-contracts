@@ -11,14 +11,14 @@ contract Erc1155ForMinterService is ERC1155, AccessControl {
     bytes32 public constant MINTER = keccak256("MINTER");
     bytes32 public constant ADMIN = keccak256("ADMIN");
 
+    event Erc1155ForMinterService_Mint(address indexed to, uint256 indexed id, uint256 amount);
+
     constructor(string memory _uri) ERC1155(_uri) {
         _grantRole(ADMIN, msg.sender);
         _grantRole(MINTER, msg.sender);
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override(ERC1155, AccessControl) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -26,12 +26,9 @@ contract Erc1155ForMinterService is ERC1155, AccessControl {
         _setURI(uri);
     }
 
-    function mint(
-        address to,
-        uint256 id,
-        uint256 amount
-    ) public onlyRole(MINTER) {
+    function mint(address to, uint256 id, uint256 amount) public onlyRole(MINTER) {
         _mint(to, id, amount, "");
+        emit Erc1155ForMinterService_Mint(to, id, amount);
     }
 
     function multiAddressMint(

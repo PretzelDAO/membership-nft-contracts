@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Erc1155ForMinterService} from "../../src/Erc1155ForMinterService.sol";
+import "../../src/Erc1155ForMinterService.sol";
 import {DeployErc1155ForMinterService} from "../../script/DeployErc1155ForMinterService.s.sol";
 
 contract TestErc1155ForMinterService is Test {
@@ -11,10 +11,12 @@ contract TestErc1155ForMinterService is Test {
     address ADMIN = makeAddr("ADMIN");
     string TEST_URI = "https://example.com";
 
+    event Erc1155ForMinterService_Mint(address indexed to, uint256 indexed id, uint256 amount);
+
     function setUp() external {
         DeployErc1155ForMinterService deployErc1155ForMinterService = new DeployErc1155ForMinterService();
         erc1155ForMinterService = deployErc1155ForMinterService.run();
-        vm.startPrank(0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38);
+        vm.startPrank(msg.sender);
         erc1155ForMinterService.grantMinter(MINTER);
         erc1155ForMinterService.grantAdmin(ADMIN);
         vm.stopPrank();
@@ -266,6 +268,8 @@ contract TestErc1155ForMinterService is Test {
         );
 
         vm.prank(MINTER);
+        vm.expectEmit();
+        emit Erc1155ForMinterService_Mint(ADMIN, 1, 1);
         erc1155ForMinterService.mint(ADMIN, 1, 1);
 
         assertEq(erc1155ForMinterService.balanceOf(ADMIN, 1), 1);
