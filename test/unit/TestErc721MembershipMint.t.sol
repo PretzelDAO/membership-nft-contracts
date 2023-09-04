@@ -27,7 +27,7 @@ contract TestErc1155FMembershipMint is Test {
         erc721MembershipMint.grantAdmin(ADMIN);
         erc721MembershipMint.setPrice(TEST_TOKEN_PRICE);
         vm.stopPrank();
-        usdcMock = UsdcMock(address(erc721MembershipMint.payment_token_contract()));
+        usdcMock = UsdcMock(address(erc721MembershipMint.paymentTokenContract()));
         usdcMock.mint(USER1, INITIAL_PAYMENT_TOKEN_BALANCE);
         usdcMock.mint(ADMIN, INITIAL_PAYMENT_TOKEN_BALANCE);
     }
@@ -38,14 +38,18 @@ contract TestErc1155FMembershipMint is Test {
         (
             ,
             string memory uri,
-            address payment_token_contract_address,
-            uint256 payment_token_contract_decimals,
-            address treasury
+            address paymentTokenContractAddress,
+            uint256 paymentTokenContractDecimals,
+            address treasury,
+            string memory defaultImageUrl,
+            string memory defaultMemberRole
         ) = deployErc721MembershipMint.helperConfig().activeNetworkConfig();
         assertEq(erc721MembershipMint.baseUri(), uri);
-        assertEq(address(erc721MembershipMint.payment_token_contract()), payment_token_contract_address);
-        assertEq(erc721MembershipMint.payment_token_contract_decimals(), payment_token_contract_decimals);
+        assertEq(address(erc721MembershipMint.paymentTokenContract()), paymentTokenContractAddress);
+        assertEq(erc721MembershipMint.paymentTokenContractDecimals(), paymentTokenContractDecimals);
         assertEq(erc721MembershipMint.treasury(), treasury);
+        assertEq(erc721MembershipMint.defaultImageUrl(), defaultImageUrl);
+        assertEq(erc721MembershipMint.defaultMemberRole(), defaultMemberRole);
     }
 
     function testOnlyAdminCanFreeMint() external {
@@ -63,8 +67,8 @@ contract TestErc1155FMembershipMint is Test {
         assertTrue(erc721MembershipMint.ownerOf(TEST_TOKEN_ID) == USER1);
     }
 
-    function testMintFailsIfNotWhitelisted() external {
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), 0);
+    function testMintFailsIfNotAllowlisted() external {
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), 0);
         vm.prank(USER1);
         vm.expectRevert();
         
@@ -74,32 +78,32 @@ contract TestErc1155FMembershipMint is Test {
 
     function testMintFailsIfNotEnoughAllowance() external {
         vm.prank(ADMIN);
-        erc721MembershipMint.addToWhitelist(USER1, TEST_TOKEN_ID);
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), TEST_TOKEN_ID);
+        erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
         vm.expectRevert();
         vm.prank(USER1);
         erc721MembershipMint.mint();
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), TEST_TOKEN_ID);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
     }
 
     function testSuccessfulMint() external {
         vm.startPrank(ADMIN);
-        erc721MembershipMint.addToWhitelist(USER1, TEST_TOKEN_ID);
+        erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
         vm.stopPrank();
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), TEST_TOKEN_ID);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
         uint256 initial_payment_token_amount_user = usdcMock.balanceOf(USER1);
         uint256 initial_payment_token_amount_treasury = usdcMock.balanceOf(erc721MembershipMint.treasury());
         vm.startPrank(USER1);
-        usdcMock.approve(address(erc721MembershipMint), erc721MembershipMint.price()*10**erc721MembershipMint.payment_token_contract_decimals());
+        usdcMock.approve(address(erc721MembershipMint), erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
         erc721MembershipMint.mint();
         vm.stopPrank();
         assertEq(erc721MembershipMint.balanceOf(USER1), 1);
         assertTrue(erc721MembershipMint.ownerOf(TEST_TOKEN_ID) == USER1);
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), 0);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), 0);
         uint256 final_payment_token_amount_user = usdcMock.balanceOf(USER1);
         uint256 final_payment_token_amount_treasury = usdcMock.balanceOf(erc721MembershipMint.treasury());
-        assertEq(final_payment_token_amount_user, initial_payment_token_amount_user - erc721MembershipMint.price()*10**erc721MembershipMint.payment_token_contract_decimals());
-        assertEq(final_payment_token_amount_treasury, initial_payment_token_amount_treasury + erc721MembershipMint.price()*10**erc721MembershipMint.payment_token_contract_decimals());
+        assertEq(final_payment_token_amount_user, initial_payment_token_amount_user - erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
+        assertEq(final_payment_token_amount_treasury, initial_payment_token_amount_treasury + erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
     }
 
     //check for soulbound
@@ -134,38 +138,38 @@ contract TestErc1155FMembershipMint is Test {
         assertTrue(erc721MembershipMint.balanceOf(USER1) == 0);
     }
 
-    function testOnlyAdminCanAddToWhitelist() external {
+    function testOnlyAdminCanAddToAllowlist() external {
         assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
         vm.expectRevert();
         vm.prank(USER1);
-        erc721MembershipMint.addToWhitelist(USER1, TEST_TOKEN_ID);
+        erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
     }
 
-    function testAddToWhitelist() external {
+    function testAddToAllowlist() external {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         vm.prank(ADMIN);
-        erc721MembershipMint.addToWhitelist(USER1, TEST_TOKEN_ID);
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), TEST_TOKEN_ID);
+        erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
     }
 
-    function testOnlyAdminCanRemoveFromWhitelist() external {
+    function testOnlyAdminCanRemoveFromAllowlist() external {
         assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
         vm.expectRevert();
         vm.prank(USER1);
-        erc721MembershipMint.removeFromWhitelist(USER1);
+        erc721MembershipMint.removeFromAllowlist(USER1);
     }
 
-    function testRemoveFromWhitelist() external {
+    function testRemoveFromAllowlist() external {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         vm.prank(ADMIN);
-        erc721MembershipMint.addToWhitelist(USER1, TEST_TOKEN_ID);
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), TEST_TOKEN_ID);
+        erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
         vm.prank(ADMIN);
-        erc721MembershipMint.removeFromWhitelist(USER1);
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), 0);
+        erc721MembershipMint.removeFromAllowlist(USER1);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), 0);
     }
 
-    function testOnlyAdminCanAddBatchToWhitelist() external {
+    function testOnlyAdminCanAddBatchToAllowlist() external {
         assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
         address[] memory users = new address[](2);
         users[0] = USER1;
@@ -175,10 +179,10 @@ contract TestErc1155FMembershipMint is Test {
         ids[1] = TEST_TOKEN_ID_2;
         vm.expectRevert();
         vm.prank(USER1);
-        erc721MembershipMint.addBatchToWhitelist(users, ids);
+        erc721MembershipMint.addBatchToAllowlist(users, ids);
     }
 
-    function testAddBatchToWhitelist() external {
+    function testAddBatchToAllowlist() external {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         address[] memory users = new address[](2);
         users[0] = USER1;
@@ -187,23 +191,23 @@ contract TestErc1155FMembershipMint is Test {
         ids[0] = TEST_TOKEN_ID;
         ids[1] = TEST_TOKEN_ID_2;
         vm.prank(ADMIN);
-        erc721MembershipMint.addBatchToWhitelist(users, ids);
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), TEST_TOKEN_ID);
-        assertEq(erc721MembershipMint.whitelistWithId(USER2), TEST_TOKEN_ID_2);
+        erc721MembershipMint.addBatchToAllowlist(users, ids);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
+        assertEq(erc721MembershipMint.allowlistWithId(USER2), TEST_TOKEN_ID_2);
 
     }
 
-    function testOnlyAdminCanRemoveBatchFromWhitelist() external {
+    function testOnlyAdminCanRemoveBatchFromAllowlist() external {
         assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
         address[] memory users = new address[](2);
         users[0] = USER1;
         users[1] = USER2;
         vm.expectRevert();
         vm.prank(USER1);
-        erc721MembershipMint.removeBatchFromWhitelist(users);
+        erc721MembershipMint.removeBatchFromAllowlist(users);
     }
 
-    function testRemoveBatchFromWhitelist() external {
+    function testRemoveBatchFromAllowlist() external {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         address[] memory users = new address[](2);
         users[0] = USER1;
@@ -212,13 +216,13 @@ contract TestErc1155FMembershipMint is Test {
         ids[0] = TEST_TOKEN_ID;
         ids[1] = TEST_TOKEN_ID_2;
         vm.prank(ADMIN);
-        erc721MembershipMint.addBatchToWhitelist(users, ids);
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), TEST_TOKEN_ID);
-        assertEq(erc721MembershipMint.whitelistWithId(USER2), TEST_TOKEN_ID_2);
+        erc721MembershipMint.addBatchToAllowlist(users, ids);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
+        assertEq(erc721MembershipMint.allowlistWithId(USER2), TEST_TOKEN_ID_2);
         vm.prank(ADMIN);
-        erc721MembershipMint.removeBatchFromWhitelist(users);
-        assertEq(erc721MembershipMint.whitelistWithId(USER1), 0);
-        assertEq(erc721MembershipMint.whitelistWithId(USER2), 0);
+        erc721MembershipMint.removeBatchFromAllowlist(users);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), 0);
+        assertEq(erc721MembershipMint.allowlistWithId(USER2), 0);
     }
 
     function testGrantAdmin() external {
@@ -251,20 +255,6 @@ contract TestErc1155FMembershipMint is Test {
         erc721MembershipMint.revokeAdmin(ADMIN);
     }
 
-    function testSetUri() external {
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
-        erc721MembershipMint.setURI(TEST_URI);
-        assertEq(erc721MembershipMint.baseUri(), TEST_URI);
-    }
-
-    function testOnlyAdminCanSetUri() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
-        vm.expectRevert();
-        vm.prank(USER1);
-        erc721MembershipMint.setURI("test");
-    }
-
     function testSetTreasury() external {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         vm.prank(ADMIN);
@@ -283,7 +273,7 @@ contract TestErc1155FMembershipMint is Test {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         vm.prank(ADMIN);
         erc721MembershipMint.setPaymentTokenContract(USER1);
-        assertEq(address(erc721MembershipMint.payment_token_contract()), USER1);
+        assertEq(address(erc721MembershipMint.paymentTokenContract()), USER1);
     }
 
     function testOnlyAdminCanSetPaymentTokenContract() external {
@@ -297,7 +287,7 @@ contract TestErc1155FMembershipMint is Test {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         vm.prank(ADMIN);
         erc721MembershipMint.setPaymentTokenContractDecimals(10);
-        assertEq(erc721MembershipMint.payment_token_contract_decimals(), 10);
+        assertEq(erc721MembershipMint.paymentTokenContractDecimals(), 10);
     }
 
     function testOnlyAdminCanSetPaymentTokenContractDecimals() external {
@@ -321,5 +311,29 @@ contract TestErc1155FMembershipMint is Test {
         vm.expectRevert();
         vm.prank(USER1);
         erc721MembershipMint.setPrice(10);
+    }
+
+        function testDefaultTokenURI() external {
+        string memory DEFAULT_URI = "data:application/json;base64,eyJuYW1lIjogIlByZXR6ZWxEQU8gTWVtYmVyc2hpcCBDYXJkIDIwMjMgIzEiLCJkZXNjcmlwdGlvbiI6ICJQcmV0emVsREFPIGUuVi4gTWVtYmVyc2hpcCBDYXJkIGZvciB0aGUgeWVhciAyMDIzLCBvbmUgcGVyIGFjdGl2ZSBhbmQgdmVyaWZpZWQgbWVtYmVyLiBNZW1iZXJzaGlwIENhcmQgTkZUIGlzIHVzZWQgYXMgYSBnb3Zlcm5hbmNlIHRva2VuIGZvciB0aGUgREFPLiBUaGUgdG9rZW4gaXMgc291bGJvdW5kIGFuZCBjYW4gb25seSBiZSB0cmFuc2ZlcnJlZCBieSB0aGUgYm9hcmQgb2YgdGhlIFByZXR6ZWxEQU8gZS5WLiIsImltYWdlIjogImlwZnM6Ly9RbWRGMWE3WTVkWFlQVW9jcGlYNnV5RjNvWk1KQjkzOUcxZVZVZFBuS0NCRHdNIiwidG9rZW5faWQiOiAxLCJleHRlcm5hbF91cmwiOiJodHRwczovL3ByZXR6ZWxkYW8uY29tLyIsImF0dHJpYnV0ZXMiOlt7InRyYWl0X3R5cGUiOiAiRWRpdGlvbiIsInZhbHVlIjogIjIwMjMifSwgeyJrZXkiOiJUeXBlIiwidHJhaXRfdHlwZSI6IlR5cGUiLCJ2YWx1ZSI6IkdvdmVybmFuY2UgVG9rZW4ifSx7ImRpc3BsYXlfdHlwZSI6ICJkYXRlIiwidHJhaXRfdHlwZSI6IlZhbGlkIGZyb20iLCJ2YWx1ZSI6MTY3MjUyNzYwMX0seyJkaXNwbGF5X3R5cGUiOiAiZGF0ZSIsInRyYWl0X3R5cGUiOiJWYWxpZCB1bnRpbCIsInZhbHVlIjoxNzA0MDYzNTk5fSx7InRyYWl0X3R5cGUiOiAiTWVtYmVyIFJvbGUiLCJ2YWx1ZSI6ICJNZW1iZXIifV19";    
+
+        vm.startPrank(ADMIN);
+        erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
+        vm.stopPrank();
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
+        uint256 initial_payment_token_amount_user = usdcMock.balanceOf(USER1);
+        uint256 initial_payment_token_amount_treasury = usdcMock.balanceOf(erc721MembershipMint.treasury());
+        vm.startPrank(USER1);
+        usdcMock.approve(address(erc721MembershipMint), erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
+        erc721MembershipMint.mint();
+        vm.stopPrank();
+        assertEq(erc721MembershipMint.balanceOf(USER1), 1);
+        assertTrue(erc721MembershipMint.ownerOf(TEST_TOKEN_ID) == USER1);
+        assertEq(erc721MembershipMint.allowlistWithId(USER1), 0);
+        uint256 final_payment_token_amount_user = usdcMock.balanceOf(USER1);
+        uint256 final_payment_token_amount_treasury = usdcMock.balanceOf(erc721MembershipMint.treasury());
+        assertEq(final_payment_token_amount_user, initial_payment_token_amount_user - erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
+        assertEq(final_payment_token_amount_treasury, initial_payment_token_amount_treasury + erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
+
+        assertEq(DEFAULT_URI, erc721MembershipMint.tokenURI(TEST_TOKEN_ID));
     }
 }

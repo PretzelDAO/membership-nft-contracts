@@ -6,33 +6,27 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 import {Erc721MembershipMint} from "../src/Erc721MembershipMint.sol";
 
 contract DeployErc721MembershipMint is Script {
-        struct NetworkConfig {
-        string erc1155ForMinterServiceUri;
-        string erc1155MembershipMintUri;
-        address payment_token_contract_address;
-        uint256 payment_token_contract_decimals;
-        address treasury;
-    }
-
-    string name = "Membership2023";
-    string symbol = "MEMB23";
-    uint256 price = 50;
+    string _name = "PretzelDAO Membership Card 2023";
+    string _symbol = "PRTZL23";
+    uint256 _price = 50;
 
 
     HelperConfig public helperConfig;
 
     function run() external returns (Erc721MembershipMint) {
         helperConfig = new HelperConfig();
-        (, string memory uri, address payment_token_contract_address, uint256 payment_token_contract_decimals, address treasury) = helperConfig.activeNetworkConfig();
+        (, string memory uri, address paymentTokenContractAddress, uint256 paymentTokenContractDecimals, address treasury, string memory defaultImageUrl, string memory defaultMemberRole) = helperConfig.activeNetworkConfig();
         vm.startBroadcast();
         Erc721MembershipMint erc721MembershipMint = new Erc721MembershipMint(
-                name,
-                symbol,
+                _name,
+                _symbol,
                 uri,
-                payment_token_contract_address,
-                payment_token_contract_decimals,
-                price,
-                treasury
+                paymentTokenContractAddress,
+                paymentTokenContractDecimals,
+                _price,
+                treasury,
+                defaultImageUrl,
+                defaultMemberRole
             );
         vm.stopBroadcast();
         return erc721MembershipMint;

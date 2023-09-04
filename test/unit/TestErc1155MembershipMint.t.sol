@@ -41,7 +41,7 @@ contract TestErc1155FMembershipMint is Test {
             string memory uri,
             address payment_token_contract_address,
             uint256 payment_token_contract_decimals,
-            address treasury
+            address treasury,,
         ) = deployErc1155MembershipMint.helperConfig().activeNetworkConfig();
         assertEq(erc1155MembershipMint.baseURI(), uri);
         assertEq(address(erc1155MembershipMint.payment_token_contract()), payment_token_contract_address);
