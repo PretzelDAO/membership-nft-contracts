@@ -23,8 +23,8 @@ contract Erc721MembershipMint is ERC721, AccessControl {
     mapping(address => uint256) public allowlistWithId;
 
     //customization options for NFTs
-    mapping(address => string) public addressToCustomizedImageUrl;
-    mapping(address => string) public addressToCustomizedMemberRole;
+    mapping(uint256 => string) public tokenIdToCustomizedImageUrl;
+    mapping(uint256 => string) public tokenIdToCustomizedMemberRole;
 
     string public defaultImageUrl;
     string public defaultMemberRole;
@@ -136,24 +136,24 @@ contract Erc721MembershipMint is ERC721, AccessControl {
         treasury = _treasury;
     }
 
-    function setImageUrl(address _address, string memory _imageUrl) external onlyRole(ADMIN) {
-        addressToCustomizedImageUrl[_address] = _imageUrl;
+    function setImageUrl(uint256 _tokenId, string memory _imageUrl) external onlyRole(ADMIN) {
+        tokenIdToCustomizedImageUrl[_tokenId] = _imageUrl;
     }
 
     function getImageUrl(uint256 _tokenId) public view returns (string memory) {
-        if (bytes(addressToCustomizedImageUrl[ownerOf(_tokenId)]).length > 0) {
-            return addressToCustomizedImageUrl[ownerOf(_tokenId)];
+        if (bytes(tokenIdToCustomizedImageUrl[_tokenId]).length > 0) {
+            return tokenIdToCustomizedImageUrl[_tokenId];
         }
         return defaultImageUrl;
     }
 
-    function setMemberRole(address _address, string memory _memberRole) external onlyRole(ADMIN) {
-        addressToCustomizedMemberRole[_address] = _memberRole;
+    function setMemberRole(uint256 _tokenId, string memory _memberRole) external onlyRole(ADMIN) {
+        tokenIdToCustomizedMemberRole[_tokenId] = _memberRole;
     }
 
     function getMemberRole(uint256 _tokenId) public view returns (string memory) {
-        if (bytes(addressToCustomizedMemberRole[ownerOf(_tokenId)]).length > 0) {
-            return addressToCustomizedMemberRole[ownerOf(_tokenId)];
+        if (bytes( tokenIdToCustomizedMemberRole[_tokenId]).length > 0) {
+            return  tokenIdToCustomizedMemberRole[_tokenId];
         }
         return defaultMemberRole;
     }

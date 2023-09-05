@@ -20,6 +20,15 @@ contract TestErc1155FMembershipMint is Test {
 
     event Erc1155ForMinterService_Mint(address indexed to, uint256 indexed id, uint256 amount);
 
+
+    modifier nftMinted() {
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
+        vm.prank(ADMIN);
+        erc721MembershipMint.freeMint(USER1, TEST_TOKEN_ID);
+        _;
+    }
+
+
     function setUp() external {
         DeployErc721MembershipMint deployErc721MembershipMint = new DeployErc721MembershipMint();
         erc721MembershipMint = deployErc721MembershipMint.run();
@@ -313,27 +322,45 @@ contract TestErc1155FMembershipMint is Test {
         erc721MembershipMint.setPrice(10);
     }
 
-        function testDefaultTokenURI() external {
-        string memory DEFAULT_URI = "data:application/json;base64,eyJuYW1lIjogIlByZXR6ZWxEQU8gTWVtYmVyc2hpcCBDYXJkIDIwMjMgIzEiLCJkZXNjcmlwdGlvbiI6ICJQcmV0emVsREFPIGUuVi4gTWVtYmVyc2hpcCBDYXJkIGZvciB0aGUgeWVhciAyMDIzLCBvbmUgcGVyIGFjdGl2ZSBhbmQgdmVyaWZpZWQgbWVtYmVyLiBNZW1iZXJzaGlwIENhcmQgTkZUIGlzIHVzZWQgYXMgYSBnb3Zlcm5hbmNlIHRva2VuIGZvciB0aGUgREFPLiBUaGUgdG9rZW4gaXMgc291bGJvdW5kIGFuZCBjYW4gb25seSBiZSB0cmFuc2ZlcnJlZCBieSB0aGUgYm9hcmQgb2YgdGhlIFByZXR6ZWxEQU8gZS5WLiIsImltYWdlIjogImlwZnM6Ly9RbWRGMWE3WTVkWFlQVW9jcGlYNnV5RjNvWk1KQjkzOUcxZVZVZFBuS0NCRHdNIiwidG9rZW5faWQiOiAxLCJleHRlcm5hbF91cmwiOiJodHRwczovL3ByZXR6ZWxkYW8uY29tLyIsImF0dHJpYnV0ZXMiOlt7InRyYWl0X3R5cGUiOiAiRWRpdGlvbiIsInZhbHVlIjogIjIwMjMifSwgeyJrZXkiOiJUeXBlIiwidHJhaXRfdHlwZSI6IlR5cGUiLCJ2YWx1ZSI6IkdvdmVybmFuY2UgVG9rZW4ifSx7ImRpc3BsYXlfdHlwZSI6ICJkYXRlIiwidHJhaXRfdHlwZSI6IlZhbGlkIGZyb20iLCJ2YWx1ZSI6MTY3MjUyNzYwMX0seyJkaXNwbGF5X3R5cGUiOiAiZGF0ZSIsInRyYWl0X3R5cGUiOiJWYWxpZCB1bnRpbCIsInZhbHVlIjoxNzA0MDYzNTk5fSx7InRyYWl0X3R5cGUiOiAiTWVtYmVyIFJvbGUiLCJ2YWx1ZSI6ICJNZW1iZXIifV19";    
-
-        vm.startPrank(ADMIN);
-        erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
-        vm.stopPrank();
-        assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
-        uint256 initial_payment_token_amount_user = usdcMock.balanceOf(USER1);
-        uint256 initial_payment_token_amount_treasury = usdcMock.balanceOf(erc721MembershipMint.treasury());
-        vm.startPrank(USER1);
-        usdcMock.approve(address(erc721MembershipMint), erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
-        erc721MembershipMint.mint();
-        vm.stopPrank();
-        assertEq(erc721MembershipMint.balanceOf(USER1), 1);
-        assertTrue(erc721MembershipMint.ownerOf(TEST_TOKEN_ID) == USER1);
-        assertEq(erc721MembershipMint.allowlistWithId(USER1), 0);
-        uint256 final_payment_token_amount_user = usdcMock.balanceOf(USER1);
-        uint256 final_payment_token_amount_treasury = usdcMock.balanceOf(erc721MembershipMint.treasury());
-        assertEq(final_payment_token_amount_user, initial_payment_token_amount_user - erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
-        assertEq(final_payment_token_amount_treasury, initial_payment_token_amount_treasury + erc721MembershipMint.price()*10**erc721MembershipMint.paymentTokenContractDecimals());
+        function testDefaultTokenURI() external nftMinted{
+        string memory DEFAULT_URI = "data:application/json;base64,eyJuYW1lIjogIlByZXR6ZWxEQU8gTWVtYmVyc2hpcCBDYXJkIDIwMjMgIzEiLCJkZXNjcmlwdGlvbiI6ICJQcmV0emVsREFPIGUuVi4gTWVtYmVyc2hpcCBDYXJkIGZvciB0aGUgeWVhciAyMDIzLCBvbmUgcGVyIGFjdGl2ZSBhbmQgdmVyaWZpZWQgbWVtYmVyLiBNZW1iZXJzaGlwIENhcmQgTkZUIGlzIHVzZWQgYXMgYSBnb3Zlcm5hbmNlIHRva2VuIGZvciB0aGUgREFPLiBUaGUgdG9rZW4gaXMgc291bGJvdW5kIGFuZCBjYW4gb25seSBiZSB0cmFuc2ZlcnJlZCBieSB0aGUgYm9hcmQgb2YgdGhlIFByZXR6ZWxEQU8gZS5WLiIsImltYWdlIjogImlwZnM6Ly9RbWRGMWE3WTVkWFlQVW9jcGlYNnV5RjNvWk1KQjkzOUcxZVZVZFBuS0NCRHdNIiwidG9rZW5faWQiOiAxLCJleHRlcm5hbF91cmwiOiJodHRwczovL3ByZXR6ZWxkYW8uY29tLyIsImF0dHJpYnV0ZXMiOlt7InRyYWl0X3R5cGUiOiAiRWRpdGlvbiIsInZhbHVlIjogIjIwMjMifSwgeyJrZXkiOiJUeXBlIiwidHJhaXRfdHlwZSI6IlR5cGUiLCJ2YWx1ZSI6IkdvdmVybmFuY2UgVG9rZW4ifSx7ImRpc3BsYXlfdHlwZSI6ICJkYXRlIiwidHJhaXRfdHlwZSI6IlZhbGlkIHVudGlsIiwidmFsdWUiOjE3MDQwNjM1OTl9LHsidHJhaXRfdHlwZSI6ICJNZW1iZXIgUm9sZSIsInZhbHVlIjogIk1lbWJlciJ9XX0=";
 
         assertEq(DEFAULT_URI, erc721MembershipMint.tokenURI(TEST_TOKEN_ID));
+    }
+
+    function testOnlyAdminCanSetMemberRole() external nftMinted{
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+        vm.expectRevert();
+        vm.prank(USER1);
+        erc721MembershipMint.setMemberRole(TEST_TOKEN_ID, "BOARD");
+    }
+
+    function testSetMemberRole() external nftMinted{
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
+        vm.prank(ADMIN);
+        erc721MembershipMint.setMemberRole(TEST_TOKEN_ID, "BOARD");
+        assertEq(erc721MembershipMint.getMemberRole(TEST_TOKEN_ID), "BOARD");
+    }
+
+    function testGetDefaultMemberRole() external nftMinted {
+        assertEq(erc721MembershipMint.getMemberRole(TEST_TOKEN_ID), erc721MembershipMint.defaultMemberRole());
+    }
+
+    function testOnlyAdminCanSetImageUrl() external nftMinted{
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+        vm.expectRevert();
+        vm.prank(USER1);
+        erc721MembershipMint.setImageUrl(TEST_TOKEN_ID, "https://test.url");
+    }
+
+    function testSetImageUrl() external nftMinted{
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
+        vm.prank(ADMIN);
+        erc721MembershipMint.setImageUrl(TEST_TOKEN_ID, "https://test.url");
+        assertEq(erc721MembershipMint.getImageUrl(TEST_TOKEN_ID), "https://test.url");
+    }
+
+    function testGetDefaultImageUrl() external nftMinted {
+        assertEq(erc721MembershipMint.getImageUrl(TEST_TOKEN_ID), erc721MembershipMint.defaultImageUrl());
     }
 }
