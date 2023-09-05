@@ -126,7 +126,43 @@ contract Erc721MembershipMint is ERC721, AccessControl {
         allowlistWithId[_address] = 0;
     }
 
-    //SETTERS
+    
+    //Onchain Metadata
+
+    struct TokenMetadata {
+        string tokenId;
+        string imageUrl;
+        string memberRole;
+
+    }   
+    function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
+        _requireMinted(_tokenId);
+
+        TokenMetadata memory tokenMetadata;
+
+        tokenMetadata.tokenId = Strings.toString(_tokenId);
+        tokenMetadata.imageUrl = getImageUrl(_tokenId);
+        tokenMetadata.memberRole = getMemberRole(_tokenId);
+
+        bytes memory dataURI = abi.encodePacked(
+            '{',
+                '"name": "PretzelDAO Membership Card 2023 #', tokenMetadata.tokenId, '",',
+                '"description": "PretzelDAO e.V. Membership Card for the year 2023, one per active and verified member. Membership Card NFT is used as a governance token for the DAO. The token is soulbound.",',
+                '"image": "', tokenMetadata.imageUrl, '","token_id": ', tokenMetadata.tokenId, ',"external_url":"https://pretzeldao.com/",',
+                '"attributes":[{"trait_type": "Edition","value": "2023"}, {"key":"Type","trait_type":"Type","value":"Governance Token"},',
+                '{"display_type": "date","trait_type":"Valid until","value":1704063599},{"trait_type": "Member Role","value": "', tokenMetadata.memberRole, '"}]'
+            '}'
+        );
+        return string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                Base64.encode(dataURI)
+            )
+        );
+    }
+
+
+    //GETTERS and SETTERS
 
     function setPrice(uint256 _price) external onlyRole(ADMIN) {
         price = _price;
@@ -156,40 +192,6 @@ contract Erc721MembershipMint is ERC721, AccessControl {
             return  tokenIdToCustomizedMemberRole[_tokenId];
         }
         return defaultMemberRole;
-    }
-
-
-    struct TokenMetadata {
-        string tokenId;
-        string imageUrl;
-        string memberRole;
-
-    }   
-    //assumption: each token has the same meta data - image and year of the membership
-    function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
-        _requireMinted(_tokenId);
-
-        TokenMetadata memory tokenMetadata;
-
-        tokenMetadata.tokenId = Strings.toString(_tokenId);
-        tokenMetadata.imageUrl = getImageUrl(_tokenId);
-        tokenMetadata.memberRole = getMemberRole(_tokenId);
-
-        bytes memory dataURI = abi.encodePacked(
-            '{',
-                '"name": "PretzelDAO Membership Card 2023 #', tokenMetadata.tokenId, '",',
-                '"description": "PretzelDAO e.V. Membership Card for the year 2023, one per active and verified member. Membership Card NFT is used as a governance token for the DAO. The token is soulbound and can only be transferred by the board of the PretzelDAO e.V.",',
-                '"image": "', tokenMetadata.imageUrl, '","token_id": ', tokenMetadata.tokenId, ',"external_url":"https://pretzeldao.com/",',
-                '"attributes":[{"trait_type": "Edition","value": "2023"}, {"key":"Type","trait_type":"Type","value":"Governance Token"},',
-                '{"display_type": "date","trait_type":"Valid until","value":1704063599},{"trait_type": "Member Role","value": "', tokenMetadata.memberRole, '"}]'
-            '}'
-        );
-        return string(
-            abi.encodePacked(
-                "data:application/json;base64,",
-                Base64.encode(dataURI)
-            )
-        );
     }
 
     function setPaymentTokenContract(address _paymentTokenContract) external onlyRole(ADMIN) {
