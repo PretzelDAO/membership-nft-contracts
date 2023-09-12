@@ -15,6 +15,8 @@ contract Erc721MembershipMint is ERC721, AccessControl {
     using Strings for uint256;
 
     bytes32 public constant ADMIN = keccak256("ADMIN");
+    bytes32 public constant NFT_MANAGEMENT = keccak256("MINTER");
+    bytes32 public constant NFT_MOVEMENT = keccak256("TRANSFER");
 
     //price - without the decimals - so 50USDC -> 50
     uint256 public price;
@@ -36,6 +38,8 @@ contract Erc721MembershipMint is ERC721, AccessControl {
 
     string public baseUri;
 
+    address public backupAdmin;
+
     constructor(
         string memory _name,
         string memory _symbol,
@@ -45,7 +49,8 @@ contract Erc721MembershipMint is ERC721, AccessControl {
         uint256 _price,
         address _treasury,
         string memory _defaultImageUrl,
-        string memory _defaultMemberRole
+        string memory _defaultMemberRole,
+        address _backupAdmin
     ) ERC721(_name, _symbol) {
         _grantRole(ADMIN, msg.sender);
         paymentTokenContract = IERC20(_paymentTokenContract);
@@ -55,32 +60,13 @@ contract Erc721MembershipMint is ERC721, AccessControl {
         price = _price;
         defaultImageUrl = _defaultImageUrl;
         defaultMemberRole = _defaultMemberRole;
+        backupAdmin = _backupAdmin;
     }
 
     function supportsInterface(
         bytes4 interfaceId
     ) public view virtual override(ERC721, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
-    }
-
-    //this is a soulbound token - only the ADMIN can move a token
-    function transferFrom(address from, address to, uint256 id) public virtual override onlyRole(ADMIN) {
-        _transfer(from, to, id);
-    }
-
-    //this is a soulbound token - only the ADMIN can move a token
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        bytes memory data
-    ) public virtual override onlyRole(ADMIN) {
-        _safeTransfer(from, to, id, data);
-    }
-
-    //this is a soulbound token - only the ADMIN can move a token
-    function safeTransferFrom(address from, address to, uint256 id) public virtual override onlyRole(ADMIN) {
-        safeTransferFrom(from, to, id, "");
     }
 
     function mint() public {
@@ -99,34 +85,6 @@ contract Erc721MembershipMint is ERC721, AccessControl {
         _safeMint(msg.sender, id, "");
     }
 
-    function freeMint(address _to, uint256 _id) public onlyRole(ADMIN) {
-        _safeMint(_to, _id, "");
-    }
-
-    // Add an address to the allowlist
-    function addToAllowlist(address _address, uint256 _reservedTokenId) external onlyRole(ADMIN) {
-        allowlistWithId[_address] = _reservedTokenId;
-    }
-
-    function addBatchToAllowlist(address[] memory _addresses, uint256[] memory _ids) external onlyRole(ADMIN) {
-        require(_ids.length == _addresses.length, "ids and addresses length mismatch");
-        for (uint256 i = 0; i < _ids.length; i++) {
-            allowlistWithId[_addresses[i]] = _ids[i];
-        }
-    }
-
-    function removeBatchFromAllowlist(address[] memory _addresses) external onlyRole(ADMIN) {
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            allowlistWithId[_addresses[i]] = 0;
-        }
-    }
-
-    // Remove an address from the allowlist
-    function removeFromAllowlist(address _address) external onlyRole(ADMIN) {
-        allowlistWithId[_address] = 0;
-    }
-
-    
     //Onchain Metadata
 
     struct TokenMetadata {
@@ -162,17 +120,40 @@ contract Erc721MembershipMint is ERC721, AccessControl {
     }
 
 
-    //GETTERS and SETTERS
-
-    function setPrice(uint256 _price) external onlyRole(ADMIN) {
-        price = _price;
+    //NFT MOVEMENT
+    function freeMint(address _to, uint256 _id) public onlyRole(NFT_MOVEMENT) {
+        _safeMint(_to, _id, "");
     }
 
-    function setTreasury(address _treasury) external onlyRole(ADMIN) {
-        treasury = _treasury;
+    //this is a soulbound token - only the ADMIN can move a token
+    function transferFrom(address from, address to, uint256 id) public virtual override onlyRole(NFT_MOVEMENT) {
+        _transfer(from, to, id);
     }
 
-    function setImageUrl(uint256 _tokenId, string memory _imageUrl) external onlyRole(ADMIN) {
+    //this is a soulbound token - only the ADMIN can move a token
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        bytes memory data
+    ) public virtual override onlyRole(NFT_MOVEMENT) {
+        _safeTransfer(from, to, id, data);
+    }
+
+    //this is a soulbound token - only the ADMIN can move a token
+    function safeTransferFrom(address from, address to, uint256 id) public virtual override onlyRole(NFT_MOVEMENT) {
+        safeTransferFrom(from, to, id, "");
+    }
+
+    //since the token cannot be transferred by the owner, there is no need to approve it
+    function approve(address, uint256) public virtual override {
+        revert("This is a soulbound token - you cannot approve it");
+    }
+
+
+    //NFT MANAGEMENT
+
+    function setImageUrl(uint256 _tokenId, string memory _imageUrl) external onlyRole(NFT_MANAGEMENT) {
         tokenIdToCustomizedImageUrl[_tokenId] = _imageUrl;
     }
 
@@ -183,7 +164,7 @@ contract Erc721MembershipMint is ERC721, AccessControl {
         return defaultImageUrl;
     }
 
-    function setMemberRole(uint256 _tokenId, string memory _memberRole) external onlyRole(ADMIN) {
+    function setMemberRole(uint256 _tokenId, string memory _memberRole) external onlyRole(NFT_MANAGEMENT) {
         tokenIdToCustomizedMemberRole[_tokenId] = _memberRole;
     }
 
@@ -194,20 +175,68 @@ contract Erc721MembershipMint is ERC721, AccessControl {
         return defaultMemberRole;
     }
 
-    function setPaymentTokenContract(address _paymentTokenContract) external onlyRole(ADMIN) {
-        paymentTokenContract = IERC20(_paymentTokenContract);
+    // Add an address to the allowlist
+    function addToAllowlist(address _address, uint256 _reservedTokenId) external onlyRole(NFT_MANAGEMENT) {
+        allowlistWithId[_address] = _reservedTokenId;
     }
 
-    function setPaymentTokenContractDecimals(uint256 _paymentTokenContractDecimals) external onlyRole(ADMIN) {
+    function addBatchToAllowlist(address[] memory _addresses, uint256[] memory _ids) external onlyRole(NFT_MANAGEMENT) {
+        require(_ids.length == _addresses.length, "ids and addresses length mismatch");
+        for (uint256 i = 0; i < _ids.length; i++) {
+            allowlistWithId[_addresses[i]] = _ids[i];
+        }
+    }
+
+    function removeBatchFromAllowlist(address[] memory _addresses) external onlyRole(NFT_MANAGEMENT) {
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            allowlistWithId[_addresses[i]] = 0;
+        }
+    }
+
+    // Remove an address from the allowlist
+    function removeFromAllowlist(address _address) external onlyRole(NFT_MANAGEMENT) {
+        allowlistWithId[_address] = 0;
+    }
+
+
+    //ADMIN
+    function setPaymentTokenContractAndDecimals(address _paymentTokenContract, uint256 _paymentTokenContractDecimals ) external onlyRole(ADMIN) {
+        paymentTokenContract = IERC20(_paymentTokenContract);
         paymentTokenContractDecimals = _paymentTokenContractDecimals;
     }
 
-    //ROLE MANAGEMENT
-    function grantAdmin(address _admin) public onlyRole(ADMIN) {
+        function setPrice(uint256 _price) external onlyRole(ADMIN) {
+        price = _price;
+    }
+
+    function setTreasury(address _treasury) external onlyRole(ADMIN) {
+        treasury = _treasury;
+    }
+
+    function grantAdmin(address _admin) public {
+        require(hasRole(ADMIN, msg.sender) || msg.sender == backupAdmin, "only admin or backup admin can grant admin");
         _grantRole(ADMIN, _admin);
     }
 
     function revokeAdmin(address _admin) public onlyRole(ADMIN) {
         _revokeRole(ADMIN, _admin);
+    }
+
+    
+    function grantNftMovement(address _nftMovement) public onlyRole(ADMIN) {
+        _grantRole(NFT_MOVEMENT, _nftMovement);
+    }
+
+    function revokeNftMovement(address _admin) public onlyRole(ADMIN) {
+        _revokeRole(NFT_MOVEMENT, _admin);
+    }
+
+    
+    function grantNftManagement(address _nftManagement) public onlyRole(ADMIN) {
+        _grantRole(NFT_MANAGEMENT, _nftManagement);
+    }
+
+    function revokeNftManagement(address _nftManagement) public onlyRole(ADMIN) {
+        _revokeRole(NFT_MANAGEMENT, _nftManagement);
     }
 }

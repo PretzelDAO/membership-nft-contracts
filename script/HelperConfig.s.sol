@@ -28,6 +28,7 @@ contract HelperConfig is Script {
         address treasury;
         string defaultImageUrl;
         string defaultMemberRole;
+        address backupAdmin;
     }
 
     constructor() {
@@ -55,7 +56,8 @@ contract HelperConfig is Script {
             paymentTokenContractDecimals: usdcMock.decimals(),
             treasury: address(0),
             defaultImageUrl: "ipfs://QmdF1a7Y5dXYPUocpiX6uyF3oZMJB939G1eVUdPnKCBDwM",
-            defaultMemberRole: "Member"
+            defaultMemberRole: "Member",
+            backupAdmin: address(0)
         });
 
         return sepoliaConfig;
@@ -69,7 +71,8 @@ contract HelperConfig is Script {
             paymentTokenContractDecimals: 6,
             treasury: address(0),
             defaultImageUrl: "ipfs://QmdF1a7Y5dXYPUocpiX6uyF3oZMJB939G1eVUdPnKCBDwM",
-            defaultMemberRole: "Member"
+            defaultMemberRole: "Member",
+            backupAdmin: address(0)
         });
         return sepoliaConfig;
     }
@@ -89,7 +92,8 @@ contract HelperConfig is Script {
             paymentTokenContractDecimals: usdcMock.decimals(),
             treasury: address(0),
             defaultImageUrl: "ipfs://QmdF1a7Y5dXYPUocpiX6uyF3oZMJB939G1eVUdPnKCBDwM",
-            defaultMemberRole: "Member"
+            defaultMemberRole: "Member",
+            backupAdmin: address(0)
         });
 
         return sepoliaConfig;
@@ -110,7 +114,8 @@ contract HelperConfig is Script {
             paymentTokenContractDecimals: usdcMock.decimals(),
             treasury: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266,
             defaultImageUrl: "ipfs://QmdF1a7Y5dXYPUocpiX6uyF3oZMJB939G1eVUdPnKCBDwM",
-            defaultMemberRole: "Member"
+            defaultMemberRole: "Member",
+            backupAdmin: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
         });
 
         return anvilConfig;

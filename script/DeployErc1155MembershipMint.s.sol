@@ -10,7 +10,7 @@ contract DeployErc1155MembershipMint is Script {
 
     function run() external returns (Erc1155MembershipMint) {
         helperConfig = new HelperConfig();
-        (, string memory uri, address paymentTokenContractAddress, uint256 paymentTokenContractDecimals, address treasury,,) = helperConfig.activeNetworkConfig();
+        (, string memory uri, address paymentTokenContractAddress, uint256 paymentTokenContractDecimals, address treasury,,,) = helperConfig.activeNetworkConfig();
         vm.startBroadcast();
         Erc1155MembershipMint erc1155MembershipMint = new Erc1155MembershipMint(
                 uri,

@@ -15,7 +15,7 @@ contract DeployErc721MembershipMint is Script {
 
     function run() external returns (Erc721MembershipMint) {
         helperConfig = new HelperConfig();
-        (, string memory uri, address paymentTokenContractAddress, uint256 paymentTokenContractDecimals, address treasury, string memory defaultImageUrl, string memory defaultMemberRole) = helperConfig.activeNetworkConfig();
+        (, string memory uri, address paymentTokenContractAddress, uint256 paymentTokenContractDecimals, address treasury, string memory defaultImageUrl, string memory defaultMemberRole, address backupAdmin) = helperConfig.activeNetworkConfig();
         vm.startBroadcast();
         Erc721MembershipMint erc721MembershipMint = new Erc721MembershipMint(
                 _name,
@@ -26,7 +26,8 @@ contract DeployErc721MembershipMint is Script {
                 _price,
                 treasury,
                 defaultImageUrl,
-                defaultMemberRole
+                defaultMemberRole,
+                backupAdmin
             );
         vm.stopBroadcast();
         return erc721MembershipMint;

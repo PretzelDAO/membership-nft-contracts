@@ -5,13 +5,17 @@ import {Test, console} from "forge-std/Test.sol";
 import {Erc721MembershipMint} from "../../src/Erc721MembershipMint.sol";
 import {DeployErc721MembershipMint} from "../../script/DeployErc721MembershipMint.s.sol";
 import {UsdcMock} from "../mocks/UsdcMock.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 contract TestErc1155FMembershipMint is Test {
     Erc721MembershipMint erc721MembershipMint;
+    HelperConfig helperConfig;
     UsdcMock usdcMock;
     address USER1 = makeAddr("USER1");
     address USER2 = makeAddr("USER2");
     address ADMIN = makeAddr("ADMIN");
+    address NFT_MOVEMENT = makeAddr("NFT_MOVEMENT");
+    address NFT_MANAGEMENT = makeAddr("NFT_MANAGEMENT");
     string TEST_URI = "https://example.com";
     uint256 TEST_TOKEN_PRICE = 50;
     uint256 INITIAL_PAYMENT_TOKEN_BALANCE = 100 * 10 ** 6;
@@ -22,8 +26,8 @@ contract TestErc1155FMembershipMint is Test {
 
 
     modifier nftMinted() {
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), NFT_MOVEMENT));
+        vm.prank(NFT_MOVEMENT);
         erc721MembershipMint.freeMint(USER1, TEST_TOKEN_ID);
         _;
     }
@@ -32,8 +36,11 @@ contract TestErc1155FMembershipMint is Test {
     function setUp() external {
         DeployErc721MembershipMint deployErc721MembershipMint = new DeployErc721MembershipMint();
         erc721MembershipMint = deployErc721MembershipMint.run();
+        helperConfig = deployErc721MembershipMint.helperConfig();
         vm.startPrank(msg.sender);
         erc721MembershipMint.grantAdmin(ADMIN);
+        erc721MembershipMint.grantNftManagement(NFT_MANAGEMENT);
+        erc721MembershipMint.grantNftMovement(NFT_MOVEMENT);
         erc721MembershipMint.setPrice(TEST_TOKEN_PRICE);
         vm.stopPrank();
         usdcMock = UsdcMock(address(erc721MembershipMint.paymentTokenContract()));
@@ -42,8 +49,6 @@ contract TestErc1155FMembershipMint is Test {
     }
 
     function testConstructor() external {
-        DeployErc721MembershipMint deployErc721MembershipMint = new DeployErc721MembershipMint();
-        erc721MembershipMint = deployErc721MembershipMint.run();
         (
             ,
             string memory uri,
@@ -51,26 +56,28 @@ contract TestErc1155FMembershipMint is Test {
             uint256 paymentTokenContractDecimals,
             address treasury,
             string memory defaultImageUrl,
-            string memory defaultMemberRole
-        ) = deployErc721MembershipMint.helperConfig().activeNetworkConfig();
+            string memory defaultMemberRole,
+            address backupAdmin
+        ) = helperConfig.activeNetworkConfig();
         assertEq(erc721MembershipMint.baseUri(), uri);
         assertEq(address(erc721MembershipMint.paymentTokenContract()), paymentTokenContractAddress);
         assertEq(erc721MembershipMint.paymentTokenContractDecimals(), paymentTokenContractDecimals);
         assertEq(erc721MembershipMint.treasury(), treasury);
         assertEq(erc721MembershipMint.defaultImageUrl(), defaultImageUrl);
         assertEq(erc721MembershipMint.defaultMemberRole(), defaultMemberRole);
+        assertEq(erc721MembershipMint.backupAdmin(), backupAdmin);
     }
 
-    function testOnlyAdminCanFreeMint() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+    function testOnlyNftMovementCanFreeMint() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), USER1));
         vm.expectRevert();
         vm.prank(USER1);
         erc721MembershipMint.freeMint(USER1, TEST_TOKEN_ID);
     }
 
     function testFreeMint() external {
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), NFT_MOVEMENT));
+        vm.prank(NFT_MOVEMENT);
         erc721MembershipMint.freeMint(USER1, TEST_TOKEN_ID);
         assertEq(erc721MembershipMint.balanceOf(USER1), 1);
         assertTrue(erc721MembershipMint.ownerOf(TEST_TOKEN_ID) == USER1);
@@ -86,7 +93,7 @@ contract TestErc1155FMembershipMint is Test {
     }
 
     function testMintFailsIfNotEnoughAllowance() external {
-        vm.prank(ADMIN);
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
         assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
         vm.expectRevert();
@@ -96,7 +103,7 @@ contract TestErc1155FMembershipMint is Test {
     }
 
     function testSuccessfulMint() external {
-        vm.startPrank(ADMIN);
+        vm.startPrank(NFT_MANAGEMENT);
         erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
         vm.stopPrank();
         assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
@@ -116,10 +123,10 @@ contract TestErc1155FMembershipMint is Test {
     }
 
     //check for soulbound
-    function testOnlyAdminCanTransfer() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
+    function testOnlyNftMovementCanTransfer() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), USER1));
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), NFT_MOVEMENT));
+        vm.prank(NFT_MOVEMENT);
         erc721MembershipMint.freeMint(USER1, TEST_TOKEN_ID);
         vm.expectRevert();
         vm.prank(USER1);
@@ -134,52 +141,52 @@ contract TestErc1155FMembershipMint is Test {
 
 
     //Club leadership should be able to move tokens
-    function testAdminCanSafeTransferFromAnyToken() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
+    function testNftMovementCanSafeTransferFromAnyToken() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), USER1));
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), NFT_MOVEMENT));
+        vm.prank(NFT_MOVEMENT);
         erc721MembershipMint.freeMint(USER1, TEST_TOKEN_ID);
         assertTrue(erc721MembershipMint.balanceOf(USER2) == 0);
         assertTrue(erc721MembershipMint.balanceOf(USER1) == 1);
-        vm.prank(ADMIN);
+        vm.prank(NFT_MOVEMENT);
         erc721MembershipMint.safeTransferFrom(USER1, USER2, TEST_TOKEN_ID);
         assertTrue(erc721MembershipMint.balanceOf(USER2) == 1);
         assertTrue(erc721MembershipMint.balanceOf(USER1) == 0);
     }
 
-    function testOnlyAdminCanAddToAllowlist() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+    function testOnlyNftManagementCanAddToAllowlist() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), USER1));
         vm.expectRevert();
         vm.prank(USER1);
         erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
     }
 
     function testAddToAllowlist() external {
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
         assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
     }
 
-    function testOnlyAdminCanRemoveFromAllowlist() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+    function testOnlyNftManagementCanRemoveFromAllowlist() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), USER1));
         vm.expectRevert();
         vm.prank(USER1);
         erc721MembershipMint.removeFromAllowlist(USER1);
     }
 
     function testRemoveFromAllowlist() external {
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.addToAllowlist(USER1, TEST_TOKEN_ID);
         assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
-        vm.prank(ADMIN);
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.removeFromAllowlist(USER1);
         assertEq(erc721MembershipMint.allowlistWithId(USER1), 0);
     }
 
-    function testOnlyAdminCanAddBatchToAllowlist() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+    function testOnlyNftManagementCanAddBatchToAllowlist() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), USER1));
         address[] memory users = new address[](2);
         users[0] = USER1;
         users[1] = USER2;
@@ -192,22 +199,22 @@ contract TestErc1155FMembershipMint is Test {
     }
 
     function testAddBatchToAllowlist() external {
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
         address[] memory users = new address[](2);
         users[0] = USER1;
         users[1] = USER2;
         uint256[] memory ids = new uint256[](2);
         ids[0] = TEST_TOKEN_ID;
         ids[1] = TEST_TOKEN_ID_2;
-        vm.prank(ADMIN);
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.addBatchToAllowlist(users, ids);
         assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
         assertEq(erc721MembershipMint.allowlistWithId(USER2), TEST_TOKEN_ID_2);
 
     }
 
-    function testOnlyAdminCanRemoveBatchFromAllowlist() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+    function testOnlyNftManagementCanRemoveBatchFromAllowlist() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), USER1));
         address[] memory users = new address[](2);
         users[0] = USER1;
         users[1] = USER2;
@@ -217,18 +224,18 @@ contract TestErc1155FMembershipMint is Test {
     }
 
     function testRemoveBatchFromAllowlist() external {
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
         address[] memory users = new address[](2);
         users[0] = USER1;
         users[1] = USER2;
         uint256[] memory ids = new uint256[](2);
         ids[0] = TEST_TOKEN_ID;
         ids[1] = TEST_TOKEN_ID_2;
-        vm.prank(ADMIN);
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.addBatchToAllowlist(users, ids);
         assertEq(erc721MembershipMint.allowlistWithId(USER1), TEST_TOKEN_ID);
         assertEq(erc721MembershipMint.allowlistWithId(USER2), TEST_TOKEN_ID_2);
-        vm.prank(ADMIN);
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.removeBatchFromAllowlist(users);
         assertEq(erc721MembershipMint.allowlistWithId(USER1), 0);
         assertEq(erc721MembershipMint.allowlistWithId(USER2), 0);
@@ -238,6 +245,15 @@ contract TestErc1155FMembershipMint is Test {
         assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         vm.prank(ADMIN);
+        erc721MembershipMint.grantAdmin(USER1);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+    }
+   
+    function testGrantAdminByDefaultAdmin() external {
+        (,,,,,,,address backupAdmin) = helperConfig.activeNetworkConfig();
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), backupAdmin));
+        vm.prank(backupAdmin);
         erc721MembershipMint.grantAdmin(USER1);
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
     }
@@ -264,6 +280,66 @@ contract TestErc1155FMembershipMint is Test {
         erc721MembershipMint.revokeAdmin(ADMIN);
     }
 
+    function testGrantNftManagement() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), USER1));
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
+        vm.prank(ADMIN);
+        erc721MembershipMint.grantNftManagement(USER1);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), USER1));
+    }
+
+    function testOnlyAdminCanGrantNftManagement() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+        vm.expectRevert();
+        vm.prank(USER1);
+        erc721MembershipMint.grantNftManagement(USER1);
+    }
+
+    function testRevokeNftManagement() external {
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
+        vm.prank(ADMIN);
+        erc721MembershipMint.revokeNftManagement(NFT_MANAGEMENT);
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
+    }
+
+    function testOnlyAdminCanRevokeNftManagement() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
+        vm.expectRevert();
+        vm.prank(USER1);
+        erc721MembershipMint.revokeNftManagement(ADMIN);
+    }
+
+    function testGrantNftMovement() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), USER1));
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
+        vm.prank(ADMIN);
+        erc721MembershipMint.grantNftMovement(USER1);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), USER1));
+    }
+
+    function testOnlyAdminCanGrantNftMovement() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), USER1));
+        vm.expectRevert();
+        vm.prank(USER1);
+        erc721MembershipMint.grantNftMovement(USER1);
+    }
+
+    function testRevokeNftMovement() external {
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), NFT_MOVEMENT));
+        vm.prank(ADMIN);
+        erc721MembershipMint.revokeNftMovement(NFT_MOVEMENT);
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), NFT_MOVEMENT));
+    }
+
+    function testOnlyAdminCanRevokeNftMovement() external {
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MOVEMENT(), NFT_MOVEMENT));
+        vm.expectRevert();
+        vm.prank(USER1);
+        erc721MembershipMint.revokeNftMovement(ADMIN);
+    }
+
     function testSetTreasury() external {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         vm.prank(ADMIN);
@@ -281,29 +357,16 @@ contract TestErc1155FMembershipMint is Test {
     function testSetPaymentTokenContract() external {
         assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
         vm.prank(ADMIN);
-        erc721MembershipMint.setPaymentTokenContract(USER1);
+        erc721MembershipMint.setPaymentTokenContractAndDecimals(USER1, 10);
         assertEq(address(erc721MembershipMint.paymentTokenContract()), USER1);
-    }
-
-    function testOnlyAdminCanSetPaymentTokenContract() external {
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
-        vm.expectRevert();
-        vm.prank(USER1);
-        erc721MembershipMint.setPaymentTokenContract(USER1);
-    }
-
-    function testSetPaymentTokenContractDecimals() external {
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
-        erc721MembershipMint.setPaymentTokenContractDecimals(10);
         assertEq(erc721MembershipMint.paymentTokenContractDecimals(), 10);
     }
 
-    function testOnlyAdminCanSetPaymentTokenContractDecimals() external {
+    function testOnlyAdminCanSetPaymentTokenContractAndDecimals() external {
         assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
         vm.expectRevert();
         vm.prank(USER1);
-        erc721MembershipMint.setPaymentTokenContractDecimals(10);
+        erc721MembershipMint.setPaymentTokenContractAndDecimals(USER1, 10);
     }
 
     function testSetPriceForTokenId() external {
@@ -322,22 +385,22 @@ contract TestErc1155FMembershipMint is Test {
         erc721MembershipMint.setPrice(10);
     }
 
-        function testDefaultTokenURI() external nftMinted{
+    function testDefaultTokenURI() external nftMinted{
         string memory DEFAULT_URI = "data:application/json;base64,eyJuYW1lIjogIlByZXR6ZWxEQU8gTWVtYmVyc2hpcCBDYXJkIDIwMjMgIzEiLCJkZXNjcmlwdGlvbiI6ICJQcmV0emVsREFPIGUuVi4gTWVtYmVyc2hpcCBDYXJkIGZvciB0aGUgeWVhciAyMDIzLCBvbmUgcGVyIGFjdGl2ZSBhbmQgdmVyaWZpZWQgbWVtYmVyLiBNZW1iZXJzaGlwIENhcmQgTkZUIGlzIHVzZWQgYXMgYSBnb3Zlcm5hbmNlIHRva2VuIGZvciB0aGUgREFPLiBUaGUgdG9rZW4gaXMgc291bGJvdW5kLiIsImltYWdlIjogImlwZnM6Ly9RbWRGMWE3WTVkWFlQVW9jcGlYNnV5RjNvWk1KQjkzOUcxZVZVZFBuS0NCRHdNIiwidG9rZW5faWQiOiAxLCJleHRlcm5hbF91cmwiOiJodHRwczovL3ByZXR6ZWxkYW8uY29tLyIsImF0dHJpYnV0ZXMiOlt7InRyYWl0X3R5cGUiOiAiRWRpdGlvbiIsInZhbHVlIjogIjIwMjMifSwgeyJrZXkiOiJUeXBlIiwidHJhaXRfdHlwZSI6IlR5cGUiLCJ2YWx1ZSI6IkdvdmVybmFuY2UgVG9rZW4ifSx7ImRpc3BsYXlfdHlwZSI6ICJkYXRlIiwidHJhaXRfdHlwZSI6IlZhbGlkIHVudGlsIiwidmFsdWUiOjE3MDQwNjM1OTl9LHsidHJhaXRfdHlwZSI6ICJNZW1iZXIgUm9sZSIsInZhbHVlIjogIk1lbWJlciJ9XX0=";
 
         assertEq(DEFAULT_URI, erc721MembershipMint.tokenURI(TEST_TOKEN_ID));
     }
 
-    function testOnlyAdminCanSetMemberRole() external nftMinted{
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+    function testOnlyNftManagementCanSetMemberRole() external nftMinted{
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), USER1));
         vm.expectRevert();
         vm.prank(USER1);
         erc721MembershipMint.setMemberRole(TEST_TOKEN_ID, "BOARD");
     }
 
     function testSetMemberRole() external nftMinted{
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.setMemberRole(TEST_TOKEN_ID, "BOARD");
         assertEq(erc721MembershipMint.getMemberRole(TEST_TOKEN_ID), "BOARD");
     }
@@ -346,21 +409,27 @@ contract TestErc1155FMembershipMint is Test {
         assertEq(erc721MembershipMint.getMemberRole(TEST_TOKEN_ID), erc721MembershipMint.defaultMemberRole());
     }
 
-    function testOnlyAdminCanSetImageUrl() external nftMinted{
-        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), USER1));
+    function testOnlyNftManagementCanSetImageUrl() external nftMinted{
+        assertFalse(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), USER1));
         vm.expectRevert();
         vm.prank(USER1);
         erc721MembershipMint.setImageUrl(TEST_TOKEN_ID, "https://test.url");
     }
 
     function testSetImageUrl() external nftMinted{
-        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.ADMIN(), ADMIN));
-        vm.prank(ADMIN);
+        assertTrue(erc721MembershipMint.hasRole(erc721MembershipMint.NFT_MANAGEMENT(), NFT_MANAGEMENT));
+        vm.prank(NFT_MANAGEMENT);
         erc721MembershipMint.setImageUrl(TEST_TOKEN_ID, "https://test.url");
         assertEq(erc721MembershipMint.getImageUrl(TEST_TOKEN_ID), "https://test.url");
     }
 
     function testGetDefaultImageUrl() external nftMinted {
         assertEq(erc721MembershipMint.getImageUrl(TEST_TOKEN_ID), erc721MembershipMint.defaultImageUrl());
+    }
+
+    function testApproveReverts() external nftMinted {
+        vm.expectRevert();
+        vm.prank(USER1);
+        erc721MembershipMint.approve(USER2, TEST_TOKEN_ID);
     }
 }
