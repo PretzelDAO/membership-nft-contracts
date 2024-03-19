@@ -22,8 +22,6 @@ contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
 
     struct NetworkConfig {
-        string erc1155ForMinterServiceUri;
-        string erc1155MembershipMintUri;
         address paymentTokenContractAddress;
         uint256 paymentTokenContractDecimals;
         address treasury;
