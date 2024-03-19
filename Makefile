@@ -18,3 +18,6 @@ deploy-sepolia-usdc-mock:
 
 deploy-sepolia-erc721-membership-mint:
 	forge script script/DeployErc721MembershipMint.s.sol:DeployErc721MembershipMint --rpc-url $(RPC_URL_SEPOLIA) --private-key $(PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
+
+deploy-arb-erc721-membership-mint:
+	forge script script/DeployErc721MembershipMint.s.sol:DeployErc721MembershipMint --rpc-url $(RPC_URL_ARB) --private-key $(PRIVATE_KEY_ARB) --broadcast --verify --etherscan-api-key $(ARBISCAN_API_KEY) -vvvv
