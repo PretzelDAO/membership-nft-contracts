@@ -6,8 +6,8 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 import {Erc721MembershipMint} from "../src/Erc721MembershipMint.sol";
 
 contract DeployErc721MembershipMint is Script {
-    string _name = "PretzelDAO Membership Card 2023";
-    string _symbol = "PRTZL23";
+    string _name = "PretzelDAO Membership Card 2024";
+    string _symbol = "PRTZL24";
     uint256 _price = 50;
 
 

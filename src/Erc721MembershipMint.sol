@@ -31,8 +31,8 @@ contract Erc721MembershipMint is ERC721, AccessControl {
     string public defaultImageUrl;
     string public defaultMemberRole;
 
-    IERC20 public paymentTokenContract; //Polygon USDC: 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174
-    uint256 public paymentTokenContractDecimals; //Polygon USDC: 6
+    IERC20 public paymentTokenContract; //Arbitrum USDC: 0xaf88d065e77c8cc2239327c5edb3a432268e5831
+    uint256 public paymentTokenContractDecimals; //Arbitrum USDC: 6
 
     address public treasury;
 
