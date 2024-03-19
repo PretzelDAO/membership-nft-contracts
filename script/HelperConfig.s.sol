@@ -109,12 +109,12 @@ contract HelperConfig is Script {
         vm.stopBroadcast();
 
         NetworkConfig memory arbitrumConfig = NetworkConfig({
-            paymentTokenContractAddress: address(0xaf88d065e77c8cc2239327c5edb3a432268e5831),
+            paymentTokenContractAddress: 0xaf88d065e77c8cc2239327c5edb3a432268e5831,
             paymentTokenContractDecimals: 6,
-            treasury: address(0xeA46ef9c1B0B6D36bF523758DAbcb1D11B8B4A7B),
+            treasury: 0xeA46ef9c1B0B6D36bF523758DAbcb1D11B8B4A7B,
             defaultImageUrl: "ipfs://QmZwd45382Q7BmwguuvskuaT3oeF9Eq6AZ8wq4qCWLdLcC",
             defaultMemberRole: "Member",
-            backupAdmin: address(0xb1845e478555bfcb183DD9cB748a20e0E3684509)
+            backupAdmin: 0xb1845e478555bfcb183DD9cB748a20e0E3684509
         });
 
         return arbitrumConfig;
