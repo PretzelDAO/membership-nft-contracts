@@ -140,11 +140,6 @@ contract Erc721MembershipMint is ERC721, AccessControl {
         _safeTransfer(from, to, id, data);
     }
 
-    //this is a soulbound token - only the ADMIN can move a token
-    function safeTransferFrom(address from, address to, uint256 id) public virtual override onlyRole(NFT_MOVEMENT) {
-        safeTransferFrom(from, to, id, "");
-    }
-
     //since the token cannot be transferred by the owner, there is no need to approve it
     function approve(address, uint256) public virtual override {
         revert("This is a soulbound token - you cannot approve it");
