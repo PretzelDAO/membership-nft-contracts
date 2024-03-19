@@ -94,7 +94,7 @@ contract Erc721MembershipMint is ERC721, AccessControl {
 
     }   
     function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
-        _requireMinted(_tokenId);
+        _requireOwned(_tokenId);
 
         TokenMetadata memory tokenMetadata;
 
