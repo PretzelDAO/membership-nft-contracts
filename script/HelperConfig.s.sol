@@ -108,7 +108,7 @@ contract HelperConfig is Script {
         UsdcMock usdcMock = new UsdcMock();
         vm.stopBroadcast();
 
-        NetworkConfig memory sepoliaConfig = NetworkConfig({
+        NetworkConfig memory arbitrumConfig = NetworkConfig({
             paymentTokenContractAddress: address(0xaf88d065e77c8cc2239327c5edb3a432268e5831),
             paymentTokenContractDecimals: 6,
             treasury: address(0xeA46ef9c1B0B6D36bF523758DAbcb1D11B8B4A7B),
@@ -117,7 +117,7 @@ contract HelperConfig is Script {
             backupAdmin: address(0xb1845e478555bfcb183DD9cB748a20e0E3684509)
         });
 
-        return sepoliaConfig;
+        return arbitrumConfig;
     }
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
