@@ -104,11 +104,11 @@ contract Erc721MembershipMint is ERC721, AccessControl {
 
         bytes memory dataURI = abi.encodePacked(
             '{',
-                '"name": "PretzelDAO Membership Card 2023 #', tokenMetadata.tokenId, '",',
-                '"description": "PretzelDAO e.V. Membership Card for the year 2023, one per active and verified member. Membership Card NFT is used as a governance token for the DAO. The token is soulbound.",',
+                '"name": "PretzelDAO Membership Card 2024 #', tokenMetadata.tokenId, '",',
+                '"description": "PretzelDAO e.V. Membership Card for the year 2024, one per active and verified member. Membership Card NFT is used as a governance token for the DAO. The token is soulbound.",',
                 '"image": "', tokenMetadata.imageUrl, '","token_id": ', tokenMetadata.tokenId, ',"external_url":"https://pretzeldao.com/",',
-                '"attributes":[{"trait_type": "Edition","value": "2023"}, {"key":"Type","trait_type":"Type","value":"Governance Token"},',
-                '{"display_type": "date","trait_type":"Valid until","value":1704063599},{"trait_type": "Member Role","value": "', tokenMetadata.memberRole, '"}]'
+                '"attributes":[{"trait_type": "Edition","value": "2024"}, {"key":"Type","trait_type":"Type","value":"Governance Token"},',
+                '{"display_type": "date","trait_type":"Valid until","value":1735685999},{"trait_type": "Member Role","value": "', tokenMetadata.memberRole, '"}]'
             '}'
         );
         return string(
